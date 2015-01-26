@@ -262,6 +262,7 @@ centros de jubilados: icon-building, icon-group, icon-heart, icon-home,
   });
 
   $('.subtipo_check').on('click', function(e) {
+    console.log(e.currentTarget);
     $(e.currentTarget).toggleClass('todo-done');
     renderAddresses();
   });
