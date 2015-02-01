@@ -1,35 +1,21 @@
 // var actividades = Papa.parse('../../datasets/actividades.csv');
 
 var csv = require('csv');
+var fs = require('fs'); 
+require('string-format').extend(String.prototype);
 
-var generator = csv.generate({seed: 1, columns: 2, length: 20});
-
+var input = fs.createReadStream('../../datasets/actividades.csv');
 var parser = csv.parse();
-var transformer = csv.transform(function(data){
-  return data.map(function(value){return value.toUpperCase()});
-});
-var stringifier = csv.stringify();
 
-generator.on('readable', function(){
-  while(data = generator.read()){
-    parser.write(data);
-  }
-});
+var records = 0;
+// using a readStream that we created already
+parser
+  .on('data', function (data) {
+    records += 1;
+  })
+  .on('end', function () {  // done
+    console.log('We have read ', records, ' records.');
+  });
 
-parser.on('readable', function(){
-  while(data = parser.read()){
-    transformer.write(data);
-  }
-});
 
-transformer.on('readable', function(){
-  while(data = transformer.read()){
-    stringifier.write(data);
-  }
-});
-
-stringifier.on('readable', function(){
-  while(data = stringifier.read()){
-    process.stdout.write(data);
-  }
-});
+input.pipe(parser);
