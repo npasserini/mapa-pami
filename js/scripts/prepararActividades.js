@@ -1,7 +1,8 @@
 var csv = require('csv');
 var fs = require('fs'); 
 var _ = require('underscore');
-var csv2obj = require('./cvs2obj.js');
+var tx = require('./transformers.js');
+var cenjubmap = require('./cenjubmap.js'); 
 
 require('string-format').extend(String.prototype);
 
@@ -25,18 +26,19 @@ var activitiesMapping = function() {
 	return mapping;	
 }();
 
-var mapper = csv.transform(csv2obj(activitiesMapping));
+var mapper = tx.csv2obj(activitiesMapping);
+var found = 0, notFound = 0;
 
-// var records = 0;
-// mapper
-//   .on('data', function (data) {
-//     records += 1;
-//     console.log(data);
-//   })
-//   .on('end', function () {  // done
-//     console.log('We have read ', records, ' records.');
-//   });
+cenjubmap(function(centros) {
+	console.log("Se encontraron {} centros". format(_.size(centros)));	
+	input.pipe(parser).pipe(mapper).on('data', function(data) {
+		var rnejyp = data.rnejyp.replace(/-/g, "");
+		var centro = centros[rnejyp];
+		if (centro) found++; else notFound++;
+	}).on('end', function() {
+		console.log(found);
+		console.log(notFound);
+	})
+});
 
-
-input.pipe(parser).pipe(mapper).pipe(csv.stringify()).pipe(process.stdout);
 
