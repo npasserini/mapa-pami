@@ -32,13 +32,14 @@ var found = 0, notFound = 0;
 cenjubmap(function(centros) {
 	console.log("Se encontraron {} centros". format(_.size(centros)));	
 	input.pipe(parser).pipe(mapper).on('data', function(data) {
-		var rnejyp = data.rnejyp.replace(/-/g, "");
+		var rnejyp = data.rnejyp.replace(/-| |:|\./g, "");
 		var centro = centros[rnejyp];
-		if (centro) found++; else notFound++;
+		if (centro) found++; else {
+			notFound++;
+			console.log(rnejyp);
+		}
 	}).on('end', function() {
 		console.log(found);
 		console.log(notFound);
 	})
 });
-
-
