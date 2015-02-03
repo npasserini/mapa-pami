@@ -4,7 +4,8 @@
 	"author": "Nico Passerini <npasserini@gmail.com>",
 	"dependencies": {
 		"csv": ">= 0.4.1",
-		"string-format": ">=0.5.0"
+		"string-format": ">=0.5.0",
+		"underscore": ">=1.7.0"
 	},
 	"engine": "node 0.10.30"
 }
