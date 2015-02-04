@@ -38,7 +38,8 @@ cenjubmap(function(centros) {
 			centro = centros.byid["0" + rnejyp];
 		}
 		if (!centro) {
-			centro = centros.byname[centros.limpiarNombre(data.cenjub.toUpperCase())];
+			data.cenjub = centros.limpiarNombre(data.cenjub.toUpperCase())
+			centro = centros.byname[data.cenjub];
 		}
 		if (centro) found++; else {
 			notFound++;

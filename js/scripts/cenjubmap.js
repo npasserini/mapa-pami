@@ -25,16 +25,31 @@ module.exports = function(callback) {
 
 	function limpiarNombre(nombre) {
 		var regexps = [
-			/CTRO. DE JYP /g, 
-			/C JYP /g, 
-			/ DE CENTROS DE JUB., PENS. Y DE LA/g
+			/CJYP/g,
+			/C JYP/g, 
+			/ DE CENTROS DE JUB\., PENS\. Y DE LA/g,
+			/CENTRO DE JYP/g,
+			/CTRO\. DE JYP/g, 
+			/CTRO DE JYP/g,
+			/C J Y P/g,
+			/C\.J\.YP/g,
+			/C\. J\.YP\./g,
+			/CTRO\. DE JUBILADOS /g,
+			/CENTRO DE JUBILADOS /g,
+			/Y PENSIONADOS/g,
+			/CTRO\. DE JUB\./g,
+			/AJYP/g, 
+			/3ª/g,
+			/3RA/g,
+			/TERCERA/g,
+			/DE /g								
 		];
 		
 		regexps.forEach(function(regexp) {
 			nombre = nombre.replace(regexp, "");
 		});
 
-		return nombre;
+		return nombre.trim();
 	}
 
 	input.pipe(parser)
