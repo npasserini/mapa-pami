@@ -33,13 +33,20 @@ cenjubmap(function(centros) {
 	console.log("Se encontraron {} centros". format(_.size(centros)));	
 	input.pipe(parser).pipe(mapper).on('data', function(data) {
 		var rnejyp = data.rnejyp.replace(/-| |:|\./g, "");
-		var centro = centros[rnejyp];
+		var centro = centros.byid[rnejyp];
+		if (!centro && rnejyp) {
+			centro = centros.byid["0" + rnejyp];
+		}
+		if (!centro) {
+			centro = centros.byname[centros.limpiarNombre(data.cenjub.toUpperCase())];
+		}
 		if (centro) found++; else {
 			notFound++;
-			console.log(rnejyp);
+			console.log("{0} - {1.cenjub} - {1.localidad}".format(rnejyp, data));
 		}
 	}).on('end', function() {
 		console.log(found);
 		console.log(notFound);
+		console.log(found / (found+notFound));		
 	})
 });

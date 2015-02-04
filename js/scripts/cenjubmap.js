@@ -21,12 +21,27 @@ module.exports = function(callback) {
 		return mapping;	
 	}();
 
-	var centros = {};
+	var centros = {byid:{}, byname:{}, limpiarNombre: limpiarNombre};
+
+	function limpiarNombre(nombre) {
+		var regexps = [
+			/CTRO. DE JYP /g, 
+			/C JYP /g, 
+			/ DE CENTROS DE JUB., PENS. Y DE LA/g
+		];
+		
+		regexps.forEach(function(regexp) {
+			nombre = nombre.replace(regexp, "");
+		});
+
+		return nombre;
+	}
 
 	input.pipe(parser)
 		.pipe(tx.csv2obj(cenjubMapping))
 		.on('data', function (data) {
-			centros[data.nro_inscri] = data;
+			centros.byid[data.nro_inscri] = data;
+			centros.byname[limpiarNombre(data.nombre_a)] = data;
 		})
 		.on('end', function() {
 			callback(centros);
