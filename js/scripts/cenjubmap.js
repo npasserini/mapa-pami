@@ -56,7 +56,7 @@ module.exports.stream = function() {
 	return input.pipe(parser).pipe(mapper);
 };
 
-module.exports.map = function(callback) {
+module.exports.getMap = function(callback) {
 	var centros = {byid:{}, byname:{}, limpiarNombre: limpiarNombre};
 
 	this.stream().on('data', function (data) {
