@@ -16,7 +16,6 @@ var config = {
 function debug() { console.log.apply(console, arguments); }
 
 function geom(obj) {
-  debug("Geom: ", obj);
   return "ST_GeomFromText('POINT({lat} {lon})', 4326)".format(obj);
 }
 
@@ -40,23 +39,37 @@ function nombreProv(id) {
 //   request.get(url, function(err, res) { if (err) throw err; else callback(res); });
 // }
 
-function queryCartoDB(query, stream) {
+function queryCartoDB(query, callback) {
   var client = new CartoDB(config);
 
   client.on('connect', function() {
+    debug(query);
     client.query(query, {});
   });
 
   client.pipe(es.parse()).on('data', function(data) {
-    debug("Data received..."); 
-    es.readArray(data.rows).pipe(stream);
+    callback(data);
   });
 
+  client.on('error', function(errr) {
+    debug("ERROR! ", err);
+  })
+
   client.connect();
-  debug("Connecting...");
+}
+
+function pipeCartoDB(query, stream) {
+  queryCartoDB(query, function(data) {
+    debug("Data received..."); 
+    rows = es.readArray(data.rows);
+    semaphore.stream = rows;
+    rows.pipe(stream);
+  })
 }
 
 function lookupGeom(row, callback) {
+  semaphore.wait();
+
   row.provincia = nombreProv(row.provincia);
   var nominatimQuery = '{calle} {numero}, {localidad}, {partido}, {provincia}, Argentina'.format(row);
 
@@ -64,53 +77,64 @@ function lookupGeom(row, callback) {
     query: encodeURIComponent(nominatimQuery)
   });
 
-  debug(nominatimUrl);        
   request.get(nominatimUrl, function(err, res) {
-    debug(nominatimQuery);
+    function error(status) {
+      callback({cartodb_id: row.cartodb_id, status: status, query: nominatimQuery}); 
+    }
 
-    if (err) {
-      debug("Error de comunicación al procesar la fila {}, se debe reintentar", row.cartodb_id);
-      callback(); 
-    }
-    else if(res.status != 200) {
-      callback({cartodb_id: row.cartodb_id, status: res.status} );
-    }
-    else if(res.body.length == 0) {
-      callback({cartodb_id: row.cartodb_id, status: -1} ); // No results
-    }
+    if (err) error(0); // Se deja el status en 0 => reintentar
+    else if(res.status != 200) error(res.status);
+    else if(res.body.length == 0) error(-1);
     else {
       var newData = {
         cartodb_id: row.cartodb_id,
+        status: 200,
         geom: geom(res.body[0])
       }
 
       debug(newData);
       callback(null, newData);
     }
-
-    //   var updateQuery = "update {table} set the_geom={geom}, status=200 where cartodb_id={row.cartodb_id}".format({
-    //     row: row,
-    //     geom: geom(res.body[0]),
-    //     table: config.table
-    //   });
-
-    //   cartodb(updateQuery, function(res) {
-    //     debug("Status: ", res.status);
-    //     if(res.status != 200) debug(res.error);
-    //   });
-    // }
-
-    // debug();
   });
 }
 
-var query = "select {fields} from {table} where status = 0".format({
+function updateRow(data) {
+  if (!data.geom) data.geom = "null";
+
+  var updateQuery = "update {table} set the_geom={data.geom}, status={data.status} where cartodb_id={data.cartodb_id}".format({
+    table: config.table,
+    data: data,
+  });
+
+  semaphore.signal();
+
+  queryCartoDB(updateQuery, function(res) {
+    debug("Updated {res.total_rows} row, cartodb_id: {data.cartodb_id}, status: {data.status}".format({
+      data: data,
+      res: res
+    }));
+  });
+}
+
+var semaphore = {
+  currentQueries: 0,
+  maxQueries: 3,
+  wait: function() {
+    debug("wait: ", ++this.currentQueries);
+
+  },
+  signal: function() {
+    debug("signal: ", --this.currentQueries);
+  }
+}
+
+var query = "select {fields} from {table} where status = 0 limit 10".format({
   fields: 'cartodb_id, ST_AsGeoJSON(the_geom), calle, numero, localidad, partido, provincia',
   table: config.table
 });
 
 var lookupGeomStream = es.map(lookupGeom);
-lookupGeomStream.on('error', function(err) { debug("No se obtuvo la dirección de ", err); });
-// lookupGeomStream.on('data', debug);
+lookupGeomStream.on('error', updateRow);
+lookupGeomStream.on('data', updateRow)
 
-queryCartoDB(query, lookupGeomStream);
+pipeCartoDB(query, lookupGeomStream);
