@@ -9,7 +9,8 @@
 		"levenshtein": "~1.0",
 		"superagent": "latest",
 		"cartodb": "latest",
-		"event-stream": "latest"
+		"event-stream": "latest",
+		"googlemaps": "latest"
 	},
 	"engine": "node 0.10.30"
 }

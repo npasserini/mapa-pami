@@ -2,42 +2,21 @@ var _ = require('underscore');
 var request = require('superagent');
 var CartoDB = require('cartodb');
 var es = require('event-stream');
+var Iterator = require('./iterator.js')
 require('string-format').extend(String.prototype);
 
-// var fetchLocations = function(filter, subtipos, bounds, callback, config) {
+var GeoCoder = require('./geoGoogleMaps.js');
+// var GeoCoder = require('./geoNominatim.js');
 
 var config = {
   user: 'nicopasserini',
   table: 'actividadesconcentros',
   api_key: 'cc36c820c088af10889651e90170f03522c4be32',
-  debug: true
+  debug: true,
+  timeout: 1000
 };
 
 function debug() { console.log.apply(console, arguments); }
-
-function geom(obj) {
-  return "ST_GeomFromText('POINT({lat} {lon})', 4326)".format(obj);
-}
-
-function nombreProv(id) {
-  var provincias = ['Capital Federal', 'Buenos Aires', 'Catamarca', 'Córdoba', 'Corrientes', 'Chaco', 'Chubut', 
-    'Entre Ríos', 'Formosa', 'Jujuy', 'La Pampa', 'La Rioja', 'Mendoza', 'Misiones', 'Neuquén', 'Río Negro', 
-    'Salta', 'San Juan', 'San Luis', 'Santa Cruz', 'Santa Fe', 'Santiago del Estero', 'Tierra del Fuego', 'Tucumán'];
-
-  return provincias[id - 1];
-}
-
-// function cartodb(query, callback) {
-//   debug(query);
-
-//   var url = 'http://{config.user}.cartodb.com/api/v2/sql?q={query}&api_key={config.apikey}'.format({
-//     query: encodeURIComponent(query),
-//     config: config,
-//   });
-//   debug(url);
-
-//   request.get(url, function(err, res) { if (err) throw err; else callback(res); });
-// }
 
 function queryCartoDB(query, callback) {
   var client = new CartoDB(config);
@@ -60,81 +39,58 @@ function queryCartoDB(query, callback) {
 
 function pipeCartoDB(query, stream) {
   queryCartoDB(query, function(data) {
-    debug("Data received..."); 
+    debug("Data received, {} rows.".format(data.rows.length)); 
     rows = es.readArray(data.rows);
-    semaphore.stream = rows;
     rows.pipe(stream);
   })
 }
 
-function lookupGeom(row, callback) {
-  semaphore.wait();
 
-  row.provincia = nombreProv(row.provincia);
-  var nominatimQuery = '{calle} {numero}, {localidad}, {partido}, {provincia}, Argentina'.format(row);
-
-  var nominatimUrl = 'http://nominatim.openstreetmap.org/search/{query}?format=json'.format({
-    query: encodeURIComponent(nominatimQuery)
-  });
-
-  request.get(nominatimUrl, function(err, res) {
-    function error(status) {
-      callback({cartodb_id: row.cartodb_id, status: status, query: nominatimQuery}); 
-    }
-
-    if (err) error(0); // Se deja el status en 0 => reintentar
-    else if(res.status != 200) error(res.status);
-    else if(res.body.length == 0) error(-1);
-    else {
-      var newData = {
-        cartodb_id: row.cartodb_id,
-        status: 200,
-        geom: geom(res.body[0])
-      }
-
-      debug(newData);
-      callback(null, newData);
-    }
-  });
-}
-
-function updateRow(data) {
+function updateRow(data, callback) {
   if (!data.geom) data.geom = "null";
 
+  if(data.status == 0) throw data;
   var updateQuery = "update {table} set the_geom={data.geom}, status={data.status} where cartodb_id={data.cartodb_id}".format({
     table: config.table,
     data: data,
   });
-
-  semaphore.signal();
 
   queryCartoDB(updateQuery, function(res) {
     debug("Updated {res.total_rows} row, cartodb_id: {data.cartodb_id}, status: {data.status}".format({
       data: data,
       res: res
     }));
+
+    if (callback) callback();
   });
 }
 
-var semaphore = {
-  currentQueries: 0,
-  maxQueries: 3,
-  wait: function() {
-    debug("wait: ", ++this.currentQueries);
+// *************************************************
+// ** Main Program
+// *************************************************
 
-  },
-  signal: function() {
-    debug("signal: ", --this.currentQueries);
-  }
-}
+var geoCoder = new GeoCoder(debug);
 
-var query = "select {fields} from {table} where status = 0 limit 10".format({
+var query = "select {fields} from {table} where status = -1".format({
   fields: 'cartodb_id, ST_AsGeoJSON(the_geom), calle, numero, localidad, partido, provincia',
   table: config.table
 });
 
-var lookupGeomStream = es.map(lookupGeom);
-lookupGeomStream.on('error', updateRow);
-lookupGeomStream.on('data', updateRow)
 
-pipeCartoDB(query, lookupGeomStream);
+queryCartoDB(query, function(data) {
+  debug("Data received, {} rows.".format(data.rows.length)); 
+  iterator = new Iterator(data.rows);
+
+  processRow();
+
+  function processRow() {
+    if (iterator.hasNext()) {
+      geoCoder.lookupGeom(iterator.next(), function(err, data) {
+        updateRow(err ? err : data, function() { debug(); setTimeout(processRow, config.timeout); });
+      });        
+    }
+    else {
+      debug("Finished processing {} rows".format(data.rows.length));
+    }
+  }
+})
