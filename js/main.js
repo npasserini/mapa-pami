@@ -2,8 +2,8 @@ $(function() {
 
   // cartoDB configuration
   var config = {
-    user: 'pami',
-    table: 'geo_servicios_pami',
+    user: 'nicopasserini',
+    table: 'actividadesconcentros',
     debug: true
   };
 
@@ -21,7 +21,6 @@ $(function() {
   });
 
   renderAddresses = function() {
-
     var filtro = $('#search').val() || '';
 
     var subtipos = _.map($('.subtipo_check.todo-done'), function(item) {
@@ -31,12 +30,10 @@ $(function() {
     var cluster = $('li.clusterMarkers div.switch div').hasClass('switch-on');
 
     map.spin(true);
-    fetchLocations(filtro, subtipos, map.getBounds(), function(data) {
+    fetchLocations(filtro, subtipos, map.getBounds(), config, function(data) {
       map.spin(false);
-
       map.renderAddresses(data.rows, filtro, cluster);
-
-    }, config);
+    });
   }
 
   map.updateCluster = function() {
@@ -52,7 +49,7 @@ $(function() {
     }, 50);
   };
 
-   // add a method to my map to render every address
+   // Add a method to my map to render every address
   map.renderAddresses = function(addresses, filtro, cluster) {
     console.log('rendering ' + addresses.length + ' addresses');
 
@@ -60,8 +57,7 @@ $(function() {
     map.addresses = cluster ? new L.MarkerClusterGroup() : new L.LayerGroup();
     map.addLayer(map.addresses);
 
-    // save a copy of the data
-    // so that I can rerender without reading from the web service
+    // Save a copy of the data so that I can rerender without reading from the web service
     map.data = addresses;
 
     var formatUrl = function(url) {
@@ -80,56 +76,79 @@ $(function() {
       return matches[1] + '<span class="filtro">' + matches[2] + '</span>' + matches[3];
     };
 
-    var formatMessage = function(location) {
+    var nombreProv = function() {
+      var provincias = ['Capital Federal', 'Buenos Aires', 'Catamarca', 'Córdoba', 'Corrientes', 'Chaco', 'Chubut', 
+        'Entre Ríos', 'Formosa', 'Jujuy', 'La Pampa', 'La Rioja', 'Mendoza', 'Misiones', 'Neuquén', 'Río Negro', 
+        'Salta', 'San Juan', 'San Luis', 'Santa Cruz', 'Santa Fe', 'Santiago del Estero', 'Tierra del Fuego', 'Tucumán'];
 
-      var extras = {
-        'Banco de protesis' : {
-          'extra1': '',
-          'extra2': '',
-          'extra3': ''
-        },
-        'Boca de atencion' : {
-          'extra1': '',
-          'extra2': '',
-          'extra3': ''
-        },
-        'Centro de jubilados' : {
-          'extra1': 'Hora de atención',
-          'extra2': 'Fecha de inscripción',
-          'extra3': 'Socios'
-        },
-        'Farmacia' : {
-          'extra1': 'Seccional',
-          'extra2': '',
-          'extra3': ''
-        },
-        'Oficina' : {
-          'extra1': 'Actividades',
-          'extra2': 'Pami escucha',
-          'extra3': 'Responsable'
+      return function(id) {
+        return provincias[id - 1];
+      }
+    }();
+
+    var locationString = function(address) {
+      var fields = ["barrio", "partido", "localidad"], 
+        data = _.map(fields, _.propertyOf(address)),
+        result = "",
+        previous = "";
+
+      data.push(nombreProv(address.provincia));
+
+      data.forEach(function(current) {
+        if (current && current.toLowerCase() !== previous.toLowerCase()) {
+          if (result) result += ", ";
+          result += current;
+          previous = current;
         }
-      };
+      });
+
+      return result;
+    }
+
+    var formatMessage = function(activity) {
+      /*
+        var message =
+          '<b>' + (location.tipo ===  'ugl' ?
+            'UGL: '     + formatFiltro(location.ugl, filtro) :
+            'Agencia: ' + formatFiltro(location.agencia, filtro)
+          ) + '</b></br>' +
+          (location.direccion ?
+            '<b>' + formatFiltro(location.direccion, filtro) + '</b></br>' : ''
+          ) +
+          (location.telefono ? '<b>Tel</b>: ' + location.telefono + '</br>' : '') +
+          (location.fax ? '<b>Fax</b>: ' + location.fax + '</br>' : '') +
+          (location.pami_escucha ? '<b>Pami escucha</b>: ' + location.pami_escucha + '</br>' : '') +
+          (location.actividades ? '<b>Actividades</b>: ' +
+            filtroActividades(location.actividades, actividades) + '</br>' : ''
+          ) +
+          (location.prestaciones_medicas ? '<b>Prestaciones</b>: ' + location.prestaciones_medicas + '</br>' : '') +
+          (location.responsable ? '<b>Responsable</b>: ' + location.responsable + '</br>' : '');
+*/
+        // if (counter == 1) { console.log(location); }
+
+        //   '<b>' + location.taller + '</b></br>' +
+        //   (location.direccion ?
+        //     '<b>' + formatFiltro(location.direccion, filtro) + '</b></br>' : ''
+        //   ) +
+        //   (location.cp ?
+        //     '<b>' + location.cp.toString() + '</b></br>' : ''
+        //   ) +
+        //   (location.telefono ? '<b>Tel</b>: ' + location.telefono + '</br>' : '')
+        // ;
+
+      //   'taller, nombre_a, nombre_efector_comunitario, ' +
+      // 'calle, numero, piso, dpto, ' +
+      // 'barrio, partido, localidad, provincia, ' +
+      var title = format("<b>{taller}</b><br/>{nombre_efector_comunitario}", activity);
+      var streetAddress = format("{calle} {numero} {piso} {dpto}", activity);
+
+      return format("{0}<br/><br/>{1}<br/>{2}", title, streetAddress, locationString(activity));
+
 
       var prop = function(title, value) {
         if (!value) return '';
         return (title ? '<b>' + title + ': </b>' : '') + value + '</br>';
       };
-
-      var propExtras = function(location) {
-        var m = '';
-        var extra;
-
-        extra = extras[location.tipo].extra1;
-        if (extra) m += prop(extra, location.extra1);
-
-        extra = extras[location.tipo].extra2;
-        if (extra) m += prop(extra, location.extra2);
-
-        extra = extras[location.tipo].extra3;
-        if (extra) m += prop(extra, location.extra3);
-
-        return m;
-      }
 
       var direccion = location.direccion +
         (location.cp ? ' (cp ' + location.cp + ')' : '');
@@ -186,67 +205,25 @@ centros de jubilados: icon-building, icon-group, icon-heart, icon-home,
 
     // optimize loop -> http://stackoverflow.com/a/1340634/47633
     var location,
-      counter = addresses.length;
+      counter = addresses.length,
+      markers = [];
 
     // map.spin(true);
+    var markerProperties = {
+      icon: L.AwesomeMarkers.icon({
+        icon: defaultIcon,
+        color: defaultColor
+      })
+    };
 
     while (counter--) {
       location = addresses[counter];
 
-      // blue, green, orange, yellow, purple, and violet
-      color = colors[location.sub_tipo] || defaultColor;
-      icon = icons[location.sub_tipo] || defaultIcon;
-
-      try {
-
-/*
-        var message =
-          '<b>' + (location.tipo ===  'ugl' ?
-            'UGL: '     + formatFiltro(location.ugl, filtro) :
-            'Agencia: ' + formatFiltro(location.agencia, filtro)
-          ) + '</b></br>' +
-          (location.direccion ?
-            '<b>' + formatFiltro(location.direccion, filtro) + '</b></br>' : ''
-          ) +
-          (location.telefono ? '<b>Tel</b>: ' + location.telefono + '</br>' : '') +
-          (location.fax ? '<b>Fax</b>: ' + location.fax + '</br>' : '') +
-          (location.pami_escucha ? '<b>Pami escucha</b>: ' + location.pami_escucha + '</br>' : '') +
-          (location.actividades ? '<b>Actividades</b>: ' +
-            filtroActividades(location.actividades, actividades) + '</br>' : ''
-          ) +
-          (location.prestaciones_medicas ? '<b>Prestaciones</b>: ' + location.prestaciones_medicas + '</br>' : '') +
-          (location.responsable ? '<b>Responsable</b>: ' + location.responsable + '</br>' : '');
-*/
-
-
-        // var message =
-        //   '<b>' + location.sub_tipo + ': ' + location.nombre + '</b></br>' +
-        //   (location.direccion ?
-        //     '<b>' + formatFiltro(location.direccion, filtro) + '</b></br>' : ''
-        //   ) +
-        //   (location.cp ?
-        //     '<b>' + location.cp.toString() + '</b></br>' : ''
-        //   ) +
-        //   (location.telefono ? '<b>Tel</b>: ' + location.telefono + '</br>' : '')
-        // ;
-
-        var message = formatMessage(location);
-
-        var marker = L.marker([location.lat, location.lon], {
-          icon: L.AwesomeMarkers.icon({
-            icon: icon,
-            color: color
-          })
-        }).bindPopup(message);
-
-        map.addresses.addLayer(marker);
-
-      } catch (e) {
-        console.log('could not create marker');
-        console.log(location);
-      }
-
+      var message = formatMessage(location);
+      markers.push(L.marker([location.lat, location.lon], markerProperties).bindPopup(message));
     }
+    map.addresses.addLayers(markers);
+    
     return this;
   };
 
@@ -256,9 +233,7 @@ centros de jubilados: icon-building, icon-group, icon-heart, icon-home,
 
   $('.clusterMarkers').on('click', function(e) {
     // give time for switch plugin to change the value of the checkbox
-    window.setTimeout(function() {
-      map.updateCluster();
-    }, 100);
+    window.setTimeout(function() { map.updateCluster(); }, 100);
   });
 
   $('.subtipo_check').on('click', function(e) {
@@ -281,5 +256,4 @@ centros de jubilados: icon-building, icon-group, icon-heart, icon-home,
     renderAddresses();
     map.lastZoom = map.getZoom();
   });
-
 });
