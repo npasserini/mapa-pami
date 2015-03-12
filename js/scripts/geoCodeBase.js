@@ -2,7 +2,7 @@ require('string-format').extend(String.prototype);
 
 module.exports = {
 	geom: function(geometry) {
-	  return "ST_GeomFromText('POINT({lat} {lon})', 4326)".format(geometry);
+	  return "ST_GeomFromText('POINT({lon} {lat})', 4326)".format(geometry);
 	},
 
 	nombreProv: function(id) {

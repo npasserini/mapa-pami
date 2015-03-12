@@ -21,7 +21,7 @@ function GoogleMapsGeoCoder(debug) {
       	error(0); // Se deja el status en 0 => reintentar
       }
       else if(data.results.length == 0) {
-      	console.log("No se.bind(this) encontraron resultados", data);
+      	console.log("No se encontraron resultados", data);
       	error(-2); // Indica que GoogleMaps no lo pudo geocodificar
       }
       else {
