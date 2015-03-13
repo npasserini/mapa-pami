@@ -71,7 +71,7 @@ function updateRow(data, callback) {
 
 var geoCoder = new GeoCoder(debug);
 
-var query = "select {fields} from {table} where status = -2".format({
+var query = "select {fields} from {table} where status < 0".format({
   fields: 'cartodb_id, ST_AsGeoJSON(the_geom), calle, numero, localidad, partido, provincia',
   table: config.table
 });
