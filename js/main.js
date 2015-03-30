@@ -54,7 +54,7 @@ $(function() {
     console.log('rendering ' + addresses.length + ' addresses');
 
     if (map.addresses) map.addresses.clearLayers();
-    map.addresses = cluster ? new L.MarkerClusterGroup() : new L.LayerGroup();
+    map.addresses = new L.MarkerClusterGroup() // cluster ? new L.MarkerClusterGroup() : new L.LayerGroup();
     map.addLayer(map.addresses);
 
     // Save a copy of the data so that I can rerender without reading from the web service
@@ -106,78 +106,11 @@ $(function() {
     }
 
     var formatMessage = function(activity) {
-      /*
-        var message =
-          '<b>' + (location.tipo ===  'ugl' ?
-            'UGL: '     + formatFiltro(location.ugl, filtro) :
-            'Agencia: ' + formatFiltro(location.agencia, filtro)
-          ) + '</b></br>' +
-          (location.direccion ?
-            '<b>' + formatFiltro(location.direccion, filtro) + '</b></br>' : ''
-          ) +
-          (location.telefono ? '<b>Tel</b>: ' + location.telefono + '</br>' : '') +
-          (location.fax ? '<b>Fax</b>: ' + location.fax + '</br>' : '') +
-          (location.pami_escucha ? '<b>Pami escucha</b>: ' + location.pami_escucha + '</br>' : '') +
-          (location.actividades ? '<b>Actividades</b>: ' +
-            filtroActividades(location.actividades, actividades) + '</br>' : ''
-          ) +
-          (location.prestaciones_medicas ? '<b>Prestaciones</b>: ' + location.prestaciones_medicas + '</br>' : '') +
-          (location.responsable ? '<b>Responsable</b>: ' + location.responsable + '</br>' : '');
-*/
-        // if (counter == 1) { console.log(location); }
-
-        //   '<b>' + location.taller + '</b></br>' +
-        //   (location.direccion ?
-        //     '<b>' + formatFiltro(location.direccion, filtro) + '</b></br>' : ''
-        //   ) +
-        //   (location.cp ?
-        //     '<b>' + location.cp.toString() + '</b></br>' : ''
-        //   ) +
-        //   (location.telefono ? '<b>Tel</b>: ' + location.telefono + '</br>' : '')
-        // ;
-
-      //   'taller, nombre_a, nombre_efector_comunitario, ' +
-      // 'calle, numero, piso, dpto, ' +
-      // 'barrio, partido, localidad, provincia, ' +
       var title = format("<b>{taller}</b><br/>{nombre_efector_comunitario}", activity);
       var streetAddress = format("{calle} {numero} {piso} {dpto}", activity);
 
       return format("{0}<br/><br/>{1}<br/>{2}", title, streetAddress, locationString(activity));
-
-
-      var prop = function(title, value) {
-        if (!value) return '';
-        return (title ? '<b>' + title + ': </b>' : '') + value + '</br>';
-      };
-
-      var direccion = location.direccion +
-        (location.cp ? ' (cp ' + location.cp + ')' : '');
-
-      var m =
-        prop(location.sub_tipo, location.nombre) +
-        prop('', formatFiltro(location.direccion, filtro)) +
-        prop('Teléfono', location.telefono) +
-        propExtras(location)
-      ;
-
-      return m;
     }
-
-/*
-banco de protesis =fa-bank, fa-recycle, fa-wheelchair
-ugl: hospital
-agencia: user-md
-boca de atencion: fa-plus-circle
-farmacias: fa-medkit
-centros de jubilados: fa-building, fa-group, fa-heart, fa-home,
-
-banco de protesis = icon-building
-ugl: icon-hospital
-agencia: icon-user-md
-boca de atencion: icon-plus-sign-alt
-farmacias: icon-medkit
-centros de jubilados: icon-building, icon-group, icon-heart, icon-home,
-*/
 
     var color,
       defaultColor = 'blue',

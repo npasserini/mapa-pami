@@ -39,9 +39,8 @@ var fetchLocations = function(filter, subtipos, bounds, config, callback) {
   if (boundQuery) conditions.push(boundQuery);
 
   if (filter) {
-    var filterQuery =
-      "lower(nombre) like '%" + filter + "%' or " +
-      "lower(direccion) like '%" + filter + "%'";
+    var filterQuery = format("lower(taller) like '%{0}%' or lower(nombre_a) like '%{0}%' or lower(nombre_efector_comunitario) like '%{0}%' or lower(calle) like '%{0}%'", filter);
+    console.log(filterQuery)
     conditions.push(filterQuery);
   };
 
